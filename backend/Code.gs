@@ -1,9 +1,59 @@
 /* =========================================
    CONFIGURATION
    ========================================= */
-const RESEND_API_KEY = "re_YbBNGonM_BYAnDJBN4PEoVZWLg44oqPu7"; // Provided Key
+const RESEND_API_KEY = "re_YbBNGonM_BYAnDJBN4PEoVZWLg44oqPu7"; 
 const APP_NAME = "EduManager";
-const ADMIN_EMAIL = "admin@edumanager.com"; // Replace with actual admin email
+const SPREADSHEET_ID = "1zI1JXrX9OUjWfVbIsy-Pjrb_R0CUV27rf96xujQHCiM"; // User Provided Sheet
+
+/* =========================================
+   INITIAL SETUP (Run this function once)
+   ========================================= */
+function initialSetup() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  
+  const schemas = {
+    "Auth_Users": ["UserID", "Email", "Mobile", "PasswordHash", "Role", "Status", "ResetToken", "TokenExpiry"],
+    "Students": ["RegNo", "Name", "DOB", "Gender", "Course", "Year", "Email", "Address", "Mobile", "ParentContact", "Status"],
+    "Teachers": ["TeacherID", "Name", "Email", "Mobile", "Dept", "Designation", "DateJoined"],
+    "Email_Logs": ["Timestamp", "Recipient", "Subject", "Status", "TriggeredBy_UserID"],
+    "Attendance": ["Date", "StudentID", "Status", "Course"],
+    "Results": ["ExamName", "StudentID", "Course", "Subject", "Marks", "Total", "Grade"],
+    "Courses": ["CourseID", "Name", "FullName", "Duration", "Fees"],
+    "Events": ["EventID", "Title", "Date", "Description", "Type"]
+  };
+
+  Object.keys(schemas).forEach(sheetName => {
+    let sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+      sheet.deleteRows(2, sheet.getMaxRows() - 2); // Cleanup default rows
+      sheet.appendRow(schemas[sheetName]); 
+      // Style headers
+      sheet.getRange(1, 1, 1, schemas[sheetName].length).setFontWeight("bold").setBackground("#f3f4f6");
+    } else {
+       if (sheet.getLastRow() === 0) {
+         sheet.appendRow(schemas[sheetName]);
+         sheet.getRange(1, 1, 1, schemas[sheetName].length).setFontWeight("bold").setBackground("#f3f4f6");
+       }
+    }
+  });
+
+  // --- CREATE DEFAULT ADMIN ---
+  const authSheet = ss.getSheetByName("Auth_Users");
+  const data = authSheet.getDataRange().getValues();
+  const adminEmail = "priyadharshini02763@gmail.com";
+  
+  // Check if admin email exists in column 2 (index 1)
+  const adminExists = data.some(row => row[1] === adminEmail);
+  
+  if (!adminExists) {
+    const passHash = hashPassword("123456");
+    // [UserID, Email, Mobile, PasswordHash, Role, Status, ResetToken, TokenExpiry]
+    authSheet.appendRow(["ADM001", adminEmail, "0000000000", passHash, "Admin", "Active", "", ""]);
+  }
+  
+  return "Database Setup Complete & Admin Created.";
+}
 
 /* =========================================
    MAIN ROUTER (doPost)
@@ -16,6 +66,7 @@ function doPost(e) {
     const data = JSON.parse(e.postData.contents);
     const action = data.action;
 
+    // Run setup if needed (lazy check, but initialSetup() is better manually)
     // --- AUTH ---
     if (action === 'login') return sendJSON(loginUser(data));
     if (action === 'registerStudent') return sendJSON(registerStudent(data));
@@ -30,9 +81,6 @@ function doPost(e) {
     // --- DATA MODULES ---
     if (action === 'getStudents') return sendJSON(getStudents(data));
     if (action === 'updateStudent') return sendJSON(updateStudent(data));
-    if (action === 'deleteStudent') return sendJSON(deleteStudent(data));
-    
-    // Placeholder for other modules
     
     return sendJSON({ status: 'error', message: 'Invalid Action' });
   } catch (error) {
@@ -51,10 +99,12 @@ function sendJSON(data) {
 }
 
 function getSheet(name) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   let sheet = ss.getSheetByName(name);
   if (!sheet) {
-    sheet = ss.insertSheet(name);
+    // Fallback: create if missing during runtime
+    initialSetup();
+    sheet = ss.getSheetByName(name);
   }
   return sheet;
 }
