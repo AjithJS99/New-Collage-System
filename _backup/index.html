@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>College ERP Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body class="bg-gray-900 h-screen flex justify-center items-center">
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-96">
+        <h1 class="text-3xl font-bold text-center mb-6">EduManager</h1>
+        <form id="loginForm">
+            <input type="text" id="uid" placeholder="Email" class="w-full border p-2 mb-4 rounded" required>
+            <input type="password" id="pass" placeholder="Password" class="w-full border p-2 mb-6 rounded" required>
+            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 rounded">LOGIN</button>
+        </form>
+        <div class="mt-4 text-center border-t pt-4">
+            <a href="register.html" class="text-blue-600 font-bold hover:underline">Register New Student</a>
+        </div>
+        <p id="msg" class="text-red-500 text-center mt-4 text-sm"></p>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbzO-cjHyyRWuDtbWI60UfC-mzJGauF9xop6j0iWilXN6Fzs5XqzsmgEOIotgsW1GsM/exec"; // Update this
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const msg = document.getElementById('msg');
+            btn.innerText = "Checking...";
+            
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'login',
+                        uid: document.getElementById('uid').value,
+                        pass: document.getElementById('pass').value
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem('role', data.role);
+                    window.location.href = "dashboard.html"; // Create this file as per previous code
+                } else {
+                    msg.innerText = data.message;
+                    btn.innerText = "LOGIN";
+                }
+            } catch (err) { msg.innerText = "Connection Failed"; }
+        });
+    </script>
+</body>
+</html>

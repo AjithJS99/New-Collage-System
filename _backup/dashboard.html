@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard | EduManager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden">
+
+    <aside class="w-64 bg-white shadow-md flex flex-col p-4">
+        <h2 class="text-2xl font-bold text-blue-600 mb-8">EduManager</h2>
+        <nav class="space-y-2 flex-1">
+            <button onclick="showSection('overview')" class="w-full text-left p-2 hover:bg-gray-100 rounded">📊 Overview</button>
+            
+            <div id="adminLinks" class="hidden">
+                <button onclick="showSection('approvals')" class="w-full text-left p-2 hover:bg-gray-100 rounded flex justify-between">
+                    🔔 Approvals <span id="badge" class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                </button>
+                <button onclick="showSection('addTeacher')" class="w-full text-left p-2 hover:bg-gray-100 rounded">➕ Add Faculty</button>
+            </div>
+        </nav>
+        <a href="index.html" class="text-red-500 text-sm mt-auto">Logout</a>
+    </aside>
+
+    <main class="flex-1 p-8 overflow-y-auto">
+        
+        <div id="overviewSection">
+            <h2 class="text-2xl font-bold mb-6">Department Performance</h2>
+            <div id="deptGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="animate-pulse bg-white p-6 rounded shadow h-32">Loading Stats...</div>
+            </div>
+        </div>
+
+        <div id="approvalsSection" class="hidden">
+            <h2 class="text-2xl font-bold mb-6">Pending Registrations</h2>
+            <div class="bg-white rounded shadow overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-100 text-gray-600 uppercase text-sm">
+                        <tr><th class="p-4">User ID</th><th class="p-4">Email</th><th class="p-4">Action</th></tr>
+                    </thead>
+                    <tbody id="approvalTable">
+                        <tr><td colspan="3" class="p-4 text-center">Checking for pending users...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="addTeacherSection" class="hidden">
+            <h2 class="text-2xl font-bold mb-6">Register Faculty</h2>
+            <form id="teacherForm" class="bg-white p-6 rounded shadow max-w-lg">
+                <div class="space-y-4">
+                    <input type="text" name="teacherId" placeholder="Teacher ID" class="w-full border p-2 rounded" required>
+                    <input type="text" name="name" placeholder="Full Name" class="w-full border p-2 rounded" required>
+                    <input type="email" name="email" placeholder="Email" class="w-full border p-2 rounded" required>
+                    <input type="text" name="mobile" placeholder="Mobile" class="w-full border p-2 rounded" required>
+                    <select name="dept" class="w-full border p-2 rounded"><option>BCA</option><option>BSC</option></select>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded">Add Teacher</button>
+                </div>
+                <p id="tMsg" class="mt-4 text-center text-sm"></p>
+            </form>
+        </div>
+
+    </main>
+
+    <script>
+        const API = "https://script.google.com/macros/s/AKfycbzO-cjHyyRWuDtbWI60UfC-mzJGauF9xop6j0iWilXN6Fzs5XqzsmgEOIotgsW1GsM/exec"; // REPLACE THIS
+
+        // Check Role
+        const role = localStorage.getItem('role');
+        if(role === 'Admin') document.getElementById('adminLinks').classList.remove('hidden');
+
+        window.onload = () => {
+            loadOverview();
+            if(role === 'Admin') loadApprovals();
+        };
+
+        async function loadOverview() {
+            try {
+                const res = await fetch(API + "?action=getDeptPerformance");
+                const data = await res.json();
+                const grid = document.getElementById('deptGrid');
+                grid.innerHTML = "";
+                data.forEach(d => {
+                    grid.innerHTML += `
+                    <div class="bg-white p-6 rounded shadow border-l-4 border-blue-500">
+                        <h3 class="font-bold text-xl">${d.dept}</h3>
+                        <p class="text-sm text-gray-500">Incharge: ${d.incharge}</p>
+                        <div class="mt-4 text-3xl font-bold text-blue-600">${d.performance}</div>
+                    </div>`;
+                });
+            } catch(e) {}
+        }
+
+        async function loadApprovals() {
+            const res = await fetch(API + "?action=getPendingUsers");
+            const data = await res.json();
+            const tbody = document.getElementById('approvalTable');
+            tbody.innerHTML = "";
+
+            if(data.length > 0) {
+                document.getElementById('badge').innerText = data.length;
+                document.getElementById('badge').classList.remove('hidden');
+                
+                data.forEach(u => {
+                    tbody.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-4 font-mono">${u.userId}</td>
+                        <td class="p-4">${u.email}</td>
+                        <td class="p-4 flex gap-2">
+                            <button onclick="approve('${u.userId}')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">Approve & Email</button>
+                            <button onclick="reject('${u.userId}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">Reject</button>
+                        </td>
+                    </tr>`;
+                });
+            } else {
+                tbody.innerHTML = "<tr><td colspan='3' class='p-4 text-center text-gray-500'>No pending approvals.</td></tr>";
+            }
+        }
+
+        async function approve(userId) {
+            if(!confirm("Approve this user? They will receive an email.")) return;
+            const btn = event.target;
+            btn.innerText = "Sending Email...";
+            btn.disabled = true;
+            
+            await fetch(API, { method: 'POST', body: JSON.stringify({ action: 'approveUser', userId }) });
+            loadApprovals(); // Refresh table
+        }
+
+        async function reject(userId) {
+            if(!confirm("Reject this user?")) return;
+            await fetch(API, { method: 'POST', body: JSON.stringify({ action: 'rejectUser', userId }) });
+            loadApprovals();
+        }
+
+        function showSection(id) {
+            ['overview', 'approvals', 'addTeacher'].forEach(s => {
+                document.getElementById(s + 'Section').classList.add('hidden');
+            });
+            document.getElementById(id + 'Section').classList.remove('hidden');
+        }
+
+        // Add Teacher Logic
+        document.getElementById('teacherForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const data = { action: 'registerTeacher' };
+            fd.forEach((v,k) => data[k] = v);
+            
+            const res = await fetch(API, { method: 'POST', body: JSON.stringify(data) });
+            const result = await res.json();
+            document.getElementById('tMsg').innerText = result.message;
+        });
+    </script>
+</body>
+</html>

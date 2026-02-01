@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Student Registration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h2 class="text-2xl font-bold text-blue-600">🎓 Student Registration</h2>
+            <a href="index.html" class="text-blue-500 hover:underline text-sm">← Back to Login</a>
+        </div>
+        
+        <form id="regForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <div class="col-span-2 bg-blue-50 p-4 rounded border border-blue-100">
+                <h3 class="font-bold text-blue-800 mb-2">Account Security</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="email" name="email" placeholder="Email Address (Login ID)" required class="border p-3 rounded">
+                    <input type="text" name="mobile" placeholder="Mobile Number" required class="border p-3 rounded">
+                    
+                    <input type="password" id="pass1" name="password" placeholder="Create Password" required class="border p-3 rounded">
+                    <input type="password" id="pass2" placeholder="Confirm Password" required class="border p-3 rounded">
+                    <p id="passError" class="text-red-500 text-xs hidden col-span-2">Passwords do not match!</p>
+                </div>
+            </div>
+
+            <div class="col-span-2 font-bold text-gray-500 uppercase text-sm mt-2">Personal Identity</div>
+            <input type="text" name="regNo" placeholder="Reg No (e.g. 2025001)" required class="border p-3 rounded">
+            <input type="text" name="fullName" placeholder="Full Name" required class="border p-3 rounded">
+            <input type="date" name="dob" required class="border p-3 rounded">
+            <select name="gender" class="border p-3 rounded bg-white"><option>Male</option><option>Female</option></select>
+            <textarea name="address" placeholder="Full Address" class="border p-3 rounded col-span-2" rows="2"></textarea>
+
+            <div class="col-span-2 font-bold text-gray-500 uppercase text-sm mt-2">Academic & Guardian</div>
+            <select name="course" class="border p-3 rounded bg-white"><option>BCA</option><option>BSC</option><option>B.Com</option></select>
+            <input type="number" name="year" placeholder="Year (e.g. 2025)" required class="border p-3 rounded">
+            <input type="text" name="contactPerson" placeholder="Guardian Name" class="border p-3 rounded">
+            <select name="relType" class="border p-3 rounded bg-white"><option>Parent</option><option>Guardian</option></select>
+            <input type="text" name="parentContact" placeholder="Guardian Contact No" class="border p-3 rounded col-span-2">
+
+            <button type="submit" class="col-span-2 bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 transition shadow-lg">
+                REGISTER & CREATE ACCOUNT
+            </button>
+        </form>
+        
+        <div id="status" class="mt-6 p-4 rounded text-center font-bold hidden"></div>
+    </div>
+
+    <script>
+        // PASTE YOUR NEW API URL HERE
+        const API_URL = "https://script.google.com/macros/s/AKfycbzO-cjHyyRWuDtbWI60UfC-mzJGauF9xop6j0iWilXN6Fzs5XqzsmgEOIotgsW1GsM/exec"; 
+
+        document.getElementById('regForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Password Validation
+            const p1 = document.getElementById('pass1').value;
+            const p2 = document.getElementById('pass2').value;
+            const err = document.getElementById('passError');
+            
+            if(p1 !== p2) {
+                err.classList.remove('hidden');
+                return; // Stop if passwords don't match
+            }
+            err.classList.add('hidden');
+
+            const btn = e.target.querySelector('button');
+            const status = document.getElementById('status');
+            
+            btn.innerText = "Processing Registration...";
+            btn.disabled = true;
+
+            // Prepare Data
+            const formData = new FormData(e.target);
+            const data = { action: 'registerStudent' };
+            formData.forEach((value, key) => data[key] = value);
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(data) // Sends password too
+                });
+                const result = await res.json();
+
+                status.innerText = result.message;
+                status.classList.remove('hidden');
+                
+                if(result.success) {
+                    status.className = "mt-6 p-4 rounded text-center font-bold bg-green-100 text-green-700 block";
+                    e.target.reset();
+                    setTimeout(() => window.location.href = "index.html", 3000); // Redirect to login
+                } else {
+                    status.className = "mt-6 p-4 rounded text-center font-bold bg-red-100 text-red-700 block";
+                }
+            } catch (err) {
+                status.innerText = "Error: " + err.message;
+                status.className = "mt-6 p-4 rounded text-center font-bold bg-red-100 text-red-700 block";
+            }
+            
+            btn.innerText = "REGISTER & CREATE ACCOUNT";
+            btn.disabled = false;
+        });
+    </script>
+</body>
+</html>

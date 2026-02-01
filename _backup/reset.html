@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reset Password</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 h-screen flex justify-center items-center">
+
+    <div class="bg-white p-8 rounded shadow w-96">
+        <h2 class="text-xl font-bold mb-4">Set New Password</h2>
+        <form id="resetForm">
+            <input type="password" id="newPass" placeholder="New Password" class="w-full border p-2 rounded mb-4" required>
+            <input type="password" id="confirmPass" placeholder="Confirm Password" class="w-full border p-2 rounded mb-4" required>
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded">Update Password</button>
+        </form>
+        <p id="msg" class="text-center mt-4 text-sm"></p>
+        <a href="index.html" class="block text-center text-blue-500 text-sm mt-4">Back to Login</a>
+    </div>
+
+    <script>
+        const API = "https://script.google.com/macros/s/AKfycbzO-cjHyyRWuDtbWI60UfC-mzJGauF9xop6j0iWilXN6Fzs5XqzsmgEOIotgsW1GsM/exec";
+        
+        // Get Token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        document.getElementById('resetForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const p1 = document.getElementById('newPass').value;
+            const p2 = document.getElementById('confirmPass').value;
+            const msg = document.getElementById('msg');
+
+            if(p1 !== p2) { msg.innerText = "Passwords do not match"; return; }
+            
+            msg.innerText = "Updating...";
+            
+            const res = await fetch(API, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'resetPassword', token: token, newPass: p1 })
+            });
+            const data = await res.json();
+            
+            msg.innerText = data.message;
+            msg.className = data.success ? "text-center mt-4 text-sm text-green-600" : "text-center mt-4 text-sm text-red-600";
+        });
+    </script>
+</body>
+</html>
